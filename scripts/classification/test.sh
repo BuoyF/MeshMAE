@@ -1,4 +1,4 @@
-python3.9 train_cls.py test \
+python train_cls.py test \
 	--dataroot ./datasets/Manifold40-MAPS-96-3/ \
 	--batch_size 32 --augment_scale --n_classes 40 \
 	--channels 10 --patch_size 64 \

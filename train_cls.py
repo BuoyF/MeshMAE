@@ -184,6 +184,7 @@ def test(net, names, criterion, test_dataset, epoch, args):
     print(message)
 
 
+
 if __name__ == '__main__':
     seed_torch(seed=43)
     parser = argparse.ArgumentParser()

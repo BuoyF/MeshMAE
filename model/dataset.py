@@ -11,7 +11,10 @@ from scipy.spatial.transform import Rotation
 import pygem
 from pygem import FFD
 import copy
+import pickle
 import csv
+import glob
+from torch.utils.data import Dataset
 
 
 def randomize_mesh_orientation(mesh: trimesh.Trimesh):
@@ -52,6 +55,7 @@ def mesh_deformation(mesh: trimesh.Trimesh):
 
 
 def load_mesh(path, augments=[], request=[], seed=None):
+    id = str(path).split('.')[-2]
     label = 0
     if 'guitar' in str(path):
         label = 15
@@ -133,6 +137,10 @@ def load_mesh(path, augments=[], request=[], seed=None):
         label = 27
     elif 'airplane' in str(path):
         label = 26
+    else:
+        with open('lean_total.pickle', 'rb') as f:
+            label_file = pickle.load(f)
+        label = label_file[label_file.ids == id].values[0][6:7].astype(np.float32) / 100000
 
     mesh = trimesh.load_mesh(path, process=False)
 
@@ -327,6 +335,74 @@ def load_mesh_shape(path, augments=[], request=[], seed=None):
     Fs_patcha = np.array(Fs)
 
     return feats_patcha, center_patcha, cordinates_patcha, faces_patcha, Fs_patcha
+
+class BodyDataset(data.Dataset):
+    def __init__(self, dataroot, train=True, augment=None, fold = 0):
+        super().__init__()
+
+        self.dataroot = Path(dataroot)
+        self.augments = []
+        self.mode = 'train' if train else 'test'
+        self.feats = ['area', 'face_angles', 'curvs', 'normal']
+        self.mesh_paths = []
+
+        with open('demographic.pickle', 'rb') as f:
+            self.demographic_data = pickle.load(f)
+        with open('general_files_split.pkl', 'rb') as f:
+            self.split = pickle.load(f)
+        if self.mode == 'train':
+            self.files = list(self.split[fold]['train_files'])
+        else:
+            self.files = list(self.split[fold]['test_files'])
+        self.labels = []
+        self.label_file = []
+        with open('lean_total.pickle', 'rb') as f:
+            self.label_file = pickle.load(f)
+        self.browse_dataroot()
+
+        if train and augment:
+            self.augments = augment
+
+
+
+
+    def browse_dataroot(self):
+        # self.shape_classes = [x.name for x in self.dataroot.iterdir() if x.is_dir()]
+        # for i,dp in enumerate(list(glob.glob(str(self.dataroot)))):
+        all_files = glob.glob(f"{self.dataroot}/*.obj", recursive=True)
+        for i, dp in enumerate(all_files):
+            dp=Path(dp)
+            if dp.is_file():
+                id = str(dp).split('\\')[-1].split('.')[-2]
+                if id in self.files:
+                    self.mesh_paths.append(dp)
+                    self.labels.append(self.label_file[self.label_file.ids == id].values[0][6:7].astype(np.float32)/100000)
+
+        self.mesh_paths = np.array(self.mesh_paths)
+        # print(self.mesh_paths)
+        self.labels = np.array(self.labels)
+        
+
+
+    def __getitem__(self, idx):
+        item = self.files[idx]
+        # print(item.split('_')[0], torch.tensor(self.labels[item.split('_')[0]]['fat_weight']/50))
+        demographic = torch.tensor(self.demographic_data[self.demographic_data.ids == item].values[0][1:].astype(np.float32))
+        # label = self.labels[idx]
+        if self.mode == 'train':
+
+            feats, center, cordinates, faces, Fs, label = load_mesh(self.mesh_paths[idx], augments=self.augments,
+                                                                    request=self.feats)
+
+            return feats, center, cordinates, faces, Fs, label, str(self.mesh_paths[idx]), demographic
+        else:
+
+            feats, center, cordinates, faces, Fs, label = load_mesh(self.mesh_paths[idx],
+                                                                    augments=self.augments,
+                                                                    request=self.feats)
+            return feats, center, cordinates, faces, Fs, label, str(self.mesh_paths[idx]), demographic
+    def __len__(self):
+        return len(self.mesh_paths)
 
 class ClassificationDataset(data.Dataset):
     def __init__(self, dataroot, train=True, augment=None):
