@@ -41,17 +41,6 @@ To process the raw data, please use data_preprocess/manifold.py, which can trans
 To remesh the meshes, you can refer to the datagen_maps.py of [SubdivNet](https://github.com/lzhengning/SubdivNet), which can generate hierarchical structures.
 
 
-### Models
-Here, we provide the download links of the pre-trained models.
-
-| Task              | Dataset        | Baseline                                                                                   | Finetune                                                                                   |      
-|-------------------|----------------|--------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------|
-| Pre-training      | ShapeNet       | [here](https://drive.google.com/file/d/1MOGlOfacoRL6ZrF4AAyB6akmio4Ek3es/view?usp=sharing) |---                                                                                        |
-| Classification    | ModelNet40     | [here](https://drive.google.com/file/d/1gvqqnBR9EpWmoOgbe5lINc-6pfpim-uI/view?usp=sharing) | [here](https://drive.google.com/file/d/1kuo_Wz5lFDq7RZNUCI6LhK6q0szfyqfU/view?usp=sharing) |
-| Segmentation      | HumanBody      | [here](https://drive.google.com/file/d/1WgPGiVqR891UF33S8s2QlsgWwyQLuilP/view?usp=sharing) | [here](https://drive.google.com/file/d/1q7yeBpMTuHhIeKXn8K_7ofAZ9pum9xot/view?usp=sharing)                                                                                   |
-| Segmentation      | Coseg-alien    | [here](https://drive.google.com/file/d/1UyDwkDtkU9eFAuv8nPT_M35Y6SnalVTI/view?usp=sharing) | [here](https://drive.google.com/file/d/1PN6PBqWaBZ4zmiq3omCkEzMNonVovfQX/view?usp=sharing) |
-
-
 ## Pretrain
 
 
@@ -92,16 +81,6 @@ sh scripts/segmentation/<...>/train.sh
 sh scripts/segmentation/<...>/train_finetune.sh
 ```
 
-
-### Finetune note 
-To finetune the model, please create a folder 'checkpoints' in the main root, and put the
-the pre-trained model in it. And '--checkpoint' in the 'train_finetune.sh' refers to the root the pre-trained model.
-
-For example, the root of pre-trained model should be:
-
-```
---checkpoint "./checkpoints/shapenet_pretrain.pkl"
-```
 
 ## Reference
 ```
