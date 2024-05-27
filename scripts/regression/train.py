@@ -5,7 +5,7 @@ import os
 command = [
     "python", "train_rgs.py", "train", 
     '--dataroot', './dataset/mesh_simplify/', 
-    '--batch_size', '32', 
+    '--batch_size', '16', 
     '--augment_scale', 
     '--n_classes', '40', 
     '--channels', '10',

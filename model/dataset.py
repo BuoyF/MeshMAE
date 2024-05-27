@@ -55,8 +55,9 @@ def mesh_deformation(mesh: trimesh.Trimesh):
 
 
 def load_mesh(path, augments=[], request=[], seed=None):
-    id = str(path).split('.')[-2]
+    id = str(path).split('.')[-2].split('\\')[-1]
     label = 0
+    print(id)
     if 'guitar' in str(path):
         label = 15
     elif 'door' in str(path):
@@ -138,12 +139,12 @@ def load_mesh(path, augments=[], request=[], seed=None):
     elif 'airplane' in str(path):
         label = 26
     else:
-        with open('lean_total.pickle', 'rb') as f:
+        with open('./dataset/lean_total.pickle', 'rb') as f:
             label_file = pickle.load(f)
         label = label_file[label_file.ids == id].values[0][6:7].astype(np.float32) / 100000
+        label = label[0]
 
     mesh = trimesh.load_mesh(path, process=False)
-
     for method in augments:
         if method == 'orient':
             mesh = randomize_mesh_orientation(mesh)
@@ -156,17 +157,16 @@ def load_mesh(path, augments=[], request=[], seed=None):
     V = mesh.vertices
 
     Fs = mesh.faces.shape[0]
-    face_coordinate = V[F.flatten()].reshape(-1, 9)
+    face_coordinate = V[F.flatten()].reshape(-1, 9) # 3 vertices, 3 coordinates[faces, 9]
 
-    face_center = V[F.flatten()].reshape(-1, 3, 3).mean(axis=1)
-    vertex_normals = mesh.vertex_normals
+    face_center = V[F.flatten()].reshape(-1, 3, 3).mean(axis=1) # 3 vertices, 3 coordinates [faces, 3]
+    vertex_normals = mesh.vertex_normals 
     face_normals = mesh.face_normals
     face_curvs = np.vstack([
         (vertex_normals[F[:, 0]] * face_normals).sum(axis=1),
         (vertex_normals[F[:, 1]] * face_normals).sum(axis=1),
         (vertex_normals[F[:, 2]] * face_normals).sum(axis=1),
-    ])
-
+    ]) # 3 coordinates [faces, 3]
     feats = []
     if 'area' in request:
         feats.append(mesh.area_faces)
@@ -175,30 +175,32 @@ def load_mesh(path, augments=[], request=[], seed=None):
     if 'center' in request:
         feats.append(face_center.T)
     if 'face_angles' in request:
-        feats.append(np.sort(mesh.face_angles, axis=1).T)
+        feats.append(np.sort(mesh.face_angles, axis=1))
     if 'curvs' in request:
-        feats.append(np.sort(face_curvs, axis=0))
-
+        feats.append(np.sort(face_curvs, axis=0).T)
     feats = np.vstack(feats)
+
     patch_num = Fs // 4 // 4 // 4
-    allindex = np.array(list(range(0, Fs)))
+    allindex = np.array(list(range(0, patch_num * 64)))
     indices = allindex.reshape(-1, patch_num).transpose(1, 0)
 
     feats_patch = feats[:, indices]
+    print(feats_patch)
     center_patch = face_center[indices]
     cordinates_patch = face_coordinate[indices]
     faces_patch = mesh.faces[indices]
+    if patch_num < 256:
+        feats_patcha = np.concatenate((feats_patch, np.zeros((10, 256 - patch_num, 64), dtype=np.float32)), 1)
+        center_patcha = np.concatenate((center_patch, np.zeros((256 - patch_num, 64, 3), dtype=np.float32)), 0)
+        cordinates_patcha = np.concatenate((cordinates_patch, np.zeros((256 - patch_num, 64, 9), dtype=np.float32)), 0)
+        faces_patcha = np.concatenate((faces_patch, np.zeros((256 - patch_num, 64, 3), dtype=np.int)), 0)
+    else: 
+        feats_patcha = feats_patch
+        center_patcha = center_patch
+        cordinates_patcha = cordinates_patch
+        faces_patcha = faces_patch
 
-    feats_patch = feats_patch
-    center_patch = center_patch
-    cordinates_patch = cordinates_patch
-    faces_patch = faces_patch
-    feats_patcha = np.concatenate((feats_patch, np.zeros((10, 256 - patch_num, 64), dtype=np.float32)), 1)
-    center_patcha = np.concatenate((center_patch, np.zeros((256 - patch_num, 64, 3), dtype=np.float32)), 0)
-    cordinates_patcha = np.concatenate((cordinates_patch, np.zeros((256 - patch_num, 64, 9), dtype=np.float32)), 0)
-    faces_patcha = np.concatenate((faces_patch, np.zeros((256 - patch_num, 64, 3), dtype=np.int)), 0)
-
-    Fs_patcha = np.array(Fs)
+    Fs_patcha = np.array(patch_num*64)
 
     return feats_patcha, center_patcha, cordinates_patcha, faces_patcha, Fs_patcha, label
 
@@ -346,9 +348,9 @@ class BodyDataset(data.Dataset):
         self.feats = ['area', 'face_angles', 'curvs', 'normal']
         self.mesh_paths = []
 
-        with open('demographic.pickle', 'rb') as f:
+        with open('./dataset/demographic.pickle', 'rb') as f:
             self.demographic_data = pickle.load(f)
-        with open('general_files_split.pkl', 'rb') as f:
+        with open('./dataset/general_files_split.pkl', 'rb') as f:
             self.split = pickle.load(f)
         if self.mode == 'train':
             self.files = list(self.split[fold]['train_files'])
@@ -356,7 +358,7 @@ class BodyDataset(data.Dataset):
             self.files = list(self.split[fold]['test_files'])
         self.labels = []
         self.label_file = []
-        with open('lean_total.pickle', 'rb') as f:
+        with open('./dataset/lean_total.pickle', 'rb') as f:
             self.label_file = pickle.load(f)
         self.browse_dataroot()
 

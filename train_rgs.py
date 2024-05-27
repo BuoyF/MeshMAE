@@ -232,8 +232,7 @@ if __name__ == '__main__':
         augments.append('deformation')
     train_dataset = BodyDataset(dataroot, train=True, augment=augments)
     test_dataset = BodyDataset(dataroot, train=False)
-    print(f"[train_rgs.py] training data set length: {len(train_dataset)}")
-    print(f"[train_rgs.py] testing data set length: {len(test_dataset)}")
+
 
     train_data_loader = data.DataLoader(train_dataset, num_workers=args.n_worker, batch_size=args.batch_size,
                                         shuffle=True, pin_memory=True)
